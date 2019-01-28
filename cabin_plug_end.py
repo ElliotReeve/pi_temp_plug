@@ -1,16 +1,25 @@
 #!/usr/bin/python
 
+import re
 import glob
 from time import sleep
-from pyHS100 import SmartPlug
+from pyHS100 import SmartPlug, Discover
 import RPi.GPIO as GPIO
 from datetime import datetime
 from pytz import timezone
 
-base_dir = '/sys/bus/w1/devices/'
-device_folder = glob.glob(base_dir + '28*')[0]
-device_file = device_folder + '/w1_slave'
-plug = SmartPlug("192.168.1.30")
+for dev in Discover.discover().values():
+	if str(dev.alias) == "Cabin Heater":
+		re1 = '.*?'
+		re2 = '((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))(?![\\d])'
+		
+		rg = re.compile(re1+re2, re.IGNORECASE|re.DOTALL)
+		m = rg.search(str(dev))
+		if m:
+			ip = m.group(1)
+		else:
+			ip = "Not Found"
+
 plug_status_file = open("/d1/cabin_plug.txt", "r")
 cabin_plug_status = plug_status_file.read()
 plug_status_file.close()
@@ -18,6 +27,11 @@ plug_log = open("/d1/cabin_log.txt", "a")
 gmt = timezone('GMT')
 time_now = datetime.now(gmt)
 string_time = time_now.strftime("%d/%m/%y %H:%M:%S")
+base_dir = '/sys/bus/w1/devices/'
+device_folder = glob.glob(base_dir + '28*')[0]
+device_file = device_folder + '/w1_slave'
+plug_log.write(string_time+" Cabin Heater plug found at IP: "+ip+"\n")
+plug = SmartPlug(ip)
 
 #set board numbering to BCM
 GPIO.setmode(GPIO.BCM)
@@ -52,10 +66,8 @@ if cabin_plug_status == "1":
 	GPIO.output(17,GPIO.LOW)
 	GPIO.output(27,GPIO.LOW)
 	plug_log.write(string_time+" Plug turned off after 15 minutes, temperature is: "+str(temp)+"\n")
-	print("Plug turned off after 15 minutes, temperature is: ", temp)
 	
 else:
 	plug_log.write(string_time+" Plug was not on, temperature is: "+str(temp)+"\n")
-	print("Plug was not on, temperature is: ", temp)
 
 plug_log.close()
