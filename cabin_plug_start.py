@@ -3,22 +3,10 @@
 import re
 import glob
 from time import sleep
-from pyHS100 import SmartPlug, Discover
+from pyHS100 import SmartPlug
 import RPi.GPIO as GPIO
 from datetime import datetime
 from pytz import timezone
-
-for dev in Discover.discover().values():
-	if str(dev.alias) == "Cabin Heater":
-		re1 = '.*?'
-		re2 = '((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))(?![\\d])'
-		
-		rg = re.compile(re1+re2, re.IGNORECASE|re.DOTALL)
-		m = rg.search(str(dev))
-		if m:
-			ip = m.group(1)
-		else:
-			ip = "Not Found"
 
 plug_status_file = open("/d1/cabin_plug.txt", "w")
 plug_log = open("/d1/cabin_log.txt", "a")
@@ -28,8 +16,7 @@ string_time = time_now.strftime("%d/%m/%y %H:%M:%S")
 base_dir = '/sys/bus/w1/devices/'
 device_folder = glob.glob(base_dir + '28*')[0]
 device_file = device_folder + '/w1_slave'
-plug_log.write(string_time+" Cabin Heater plug found at IP: "+ip+"\n")
-plug = SmartPlug(ip)
+plug = SmartPlug("192.168.1.144")
 
 #set board numbering to BCM
 GPIO.setmode(GPIO.BCM)
